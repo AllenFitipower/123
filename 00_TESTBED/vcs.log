@@ -1,0 +1,33 @@
+
+Warning-[LNX_OS_VERUN] Unsupported Linux version
+  Linux version 'Rocky Linux release 8.10 (Green Obsidian)' is not supported 
+  on 'x86_64' officially, assuming linux compatibility by default. Set 
+  VCS_ARCH_OVERRIDE to linux or suse32 to override.
+  Please refer to release notes for information on supported platforms.
+
+
+Warning-[LINX_KRNL] Unsupported Linux kernel
+  Linux kernel '4.18.0-553.58.1.el8_10.x86_64' is not supported.
+  Supported versions are 2.4* or 2.6*.
+
+Command: vcs -full64 -timescale=1ns/1fs -j8 -sverilog +v2k -full64 -Mupdate -R -debug_access+all \
+-y /usr/cad/synopsys/synthesis/cur/dw/sim_ver/ +libext+.v -f filelist.f -o simv -l \
+vcs.log -P /usr/cad/synopsys/verdi/2019.06//share/PLI/VCS/linux64/novas.tab /usr/cad/synopsys/verdi/2019.06//share/PLI/VCS/linux64/pli.a \
++define+RTL +define+RUN +define+PERF +notimingchecks
+                         Chronologic VCS (TM)
+       Version O-2018.09-SP2_Full64 -- Thu Jun 18 10:16:21 2026
+               Copyright (c) 1991-2018 by Synopsys Inc.
+                         ALL RIGHTS RESERVED
+
+This program is proprietary and confidential information of Synopsys Inc.
+and may be used and disclosed only as authorized in a license agreement
+controlling such use and disclosure.
+
+
+Error-[COP_PLI_TAB] Cannot open pli table file
+  Cannot open pli table file 
+  '/usr/cad/synopsys/verdi/2019.06//share/PLI/VCS/linux64/novas.tab'.
+  Please make sure tab file exists and readable.
+
+Bad command line arg encountered
+CPU time: .201 seconds to compile

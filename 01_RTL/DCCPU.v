@@ -789,28 +789,6 @@ module DCCPU (
     end
     assign core2_reg_gclk = clk & core2_reg_gclk_lat;
 
-    // ===== Manual Clock Gating: Pipeline / Fetch Registers =====
-    wire pipe_gclk_en = core1_ex_ready || core2_ex_ready;
-    wire pipe_gclk;
-    reg  pipe_gclk_lat;
-    always @(*) begin
-        if (!clk) pipe_gclk_lat = pipe_gclk_en || !rst_n;
-    end
-    assign pipe_gclk = clk & pipe_gclk_lat;
-
-    // ===== Manual Clock Gating: AXI / Data State Registers =====
-    wire axi_state_gclk_en = (state != next_state) || cpu_write_enable ||
-                             core2_read_miss_issue || core1_read_miss_issue ||
-                             axi_aw_hs || axi_w_hs || axi_write_accepted ||
-                             axi_write_success || (arvalid_m_inf_data && arready_m_inf_data) ||
-                             (state != NORMAL);
-    wire axi_state_gclk;
-    reg  axi_state_gclk_lat;
-    always @(*) begin
-        if (!clk) axi_state_gclk_lat = axi_state_gclk_en || !rst_n;
-    end
-    assign axi_state_gclk = clk & axi_state_gclk_lat;
-
     wire [12:0] core1_imm_addr_offset = core1_branch_calc_en ? {core1_immediate_ext[11:0], 1'b0} : 13'd0;
     wire [12:0] core1_branch_base_pc = core1_branch_calc_en ? core1_pc_plus_2_ex : 13'd0;
     wire [12:0] core1_branch_target = core1_branch_base_pc + core1_imm_addr_offset;
@@ -891,7 +869,7 @@ module DCCPU (
         end
     end
 
-    always @(posedge pipe_gclk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             fetch_valid_1 <= 1'b0;
             prog_counter_1_if2 <= 13'd0;
@@ -974,7 +952,7 @@ module DCCPU (
         endcase
     end
 
-    always @(posedge axi_state_gclk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= NORMAL;
             axi_addr_reg <= 13'd0;
@@ -1014,7 +992,7 @@ module DCCPU (
         end
     end
 
-    always @(posedge axi_state_gclk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             axi_aw_done <= 1'b0;
             axi_w_done <= 1'b0;
