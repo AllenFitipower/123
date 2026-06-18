@@ -248,11 +248,10 @@ module DCCPU (
         endcase
     end
 
-    wire icache1_filling = (inst_cache1_state == IC_AR_REQ) || (inst_cache1_state == IC_R_FILL);
     always @(*) begin
         next_inst_cache2_state = inst_cache2_state;
         case (inst_cache2_state)
-            IC_NORMAL: if (inst_cache2_miss && !icache1_filling) next_inst_cache2_state = IC_AR_REQ;
+            IC_NORMAL: if (inst_cache2_miss) next_inst_cache2_state = IC_AR_REQ;
             IC_AR_REQ:
             if (arvalid_m_inf_inst_2 && arready_m_inf_inst_2) next_inst_cache2_state = IC_R_FILL;
             IC_R_FILL:
@@ -1393,7 +1392,7 @@ module DCCPU (
         end else begin
             if (inst_cache1_sram_we) begin
                 final_ic1_sram_addr_reg <= inst_cache1_sram_addr;
-            end else if (icache1_sram_cs_next) begin
+            end else begin
                 final_ic1_sram_addr_reg <= core1_next_pc[6:1];
             end
         end
@@ -1478,7 +1477,7 @@ module DCCPU (
         end else begin
             if (inst_cache2_sram_we) begin
                 final_ic2_sram_addr_reg <= inst_cache2_sram_addr;
-            end else if (icache2_sram_cs_next) begin
+            end else begin
                 final_ic2_sram_addr_reg <= core2_next_pc[6:1];
             end
         end
