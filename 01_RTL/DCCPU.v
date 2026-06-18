@@ -343,6 +343,8 @@ module DCCPU (
     wire inst_cache2_sram_we = inst_cache2_fill_beat;
     wire [15:0] inst_cache2_sram_rdata;
 
+    reg  icache1_sram_cs_reg;
+    reg  icache2_sram_cs_reg;
     wire icache1_wait_read;
     wire icache2_wait_read;
     reg inst_cache1_miss_recover, inst_cache2_miss_recover;
@@ -1362,7 +1364,6 @@ module DCCPU (
 
     wire icache1_sram_cs;
     wire icache1_sram_cs_next;
-    reg  icache1_sram_cs_reg;
     reg  inst_cache1_we_reg;
     assign icache1_sram_cs = icache1_sram_cs_reg;
     assign icache1_sram_cs_next = 
@@ -1371,7 +1372,6 @@ module DCCPU (
 
     wire icache2_sram_cs;
     wire icache2_sram_cs_next;
-    reg  icache2_sram_cs_reg;
     reg  inst_cache2_we_reg;
     assign icache2_sram_cs = icache2_sram_cs_reg;
     assign icache2_sram_cs_next = 
