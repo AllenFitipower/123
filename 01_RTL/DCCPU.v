@@ -364,8 +364,9 @@ module DCCPU (
     wire               mult_start;
     wire        [ 2:0] booth_window;
     reg signed  [17:0] partial_product;
-    wire signed [17:0] upper_half = $signed(product_reg[31:16]);
-    wire signed [17:0] next_upper = upper_half + partial_product;
+    wire signed [17:0] upper_half = mult_running ? $signed(product_reg[31:16]) : 18'sd0;
+    wire signed [17:0] mult_pp_iso = mult_running ? partial_product : 18'sd0;
+    wire signed [17:0] next_upper = upper_half + mult_pp_iso;
     wire        [31:0] core1_mult_out;
     wire        [31:0] core2_mult_out;
 
@@ -669,13 +670,13 @@ module DCCPU (
     wire core1_req = instruction_reg1_valid && (core1_mem_read || core1_mem_write);
     wire core2_req = instruction_reg2_valid && (core2_mem_read || core2_mem_write);
 
-    wire [5:0] core1_idx = core1_mem_addr[6:1];
-    wire [5:0] core1_tag = {core1_mem_addr[13], core1_mem_addr[11:7]};
-    wire [5:0] core2_idx = core2_mem_addr[6:1];
-    wire [5:0] core2_tag = {core2_mem_addr[13], core2_mem_addr[11:7]};
+    wire [5:0] core1_idx = core1_mem_calc_en ? core1_mem_addr[6:1] : 6'd0;
+    wire [5:0] core1_tag = core1_mem_calc_en ? {core1_mem_addr[13], core1_mem_addr[11:7]} : 6'd0;
+    wire [5:0] core2_idx = core2_mem_calc_en ? core2_mem_addr[6:1] : 6'd0;
+    wire [5:0] core2_tag = core2_mem_calc_en ? {core2_mem_addr[13], core2_mem_addr[11:7]} : 6'd0;
 
-    wire core1_hit = data_cache_valid_array[core1_idx] && (data_cache_tag_array[core1_idx] == core1_tag);
-    wire core2_hit = data_cache_valid_array[core2_idx] && (data_cache_tag_array[core2_idx] == core2_tag);
+    wire core1_hit = core1_mem_calc_en && data_cache_valid_array[core1_idx] && (data_cache_tag_array[core1_idx] == core1_tag);
+    wire core2_hit = core2_mem_calc_en && data_cache_valid_array[core2_idx] && (data_cache_tag_array[core2_idx] == core2_tag);
 
     wire same_mem_addr = ((core1_mem_read || core1_mem_write) && (core2_mem_read || core2_mem_write)) ?
                          (core1_mem_adder_result == core2_mem_adder_result) : 1'b0;
@@ -1363,7 +1364,7 @@ module DCCPU (
     assign icache1_sram_cs = icache1_sram_cs_reg;
     assign icache1_sram_cs_next = 
            inst_cache1_sram_we ||
-           ((inst_cache1_state == IC_NORMAL) && !inst_cache1_miss);
+           ((inst_cache1_state == IC_NORMAL) && !inst_cache1_miss && core1_ex_ready);
 
     wire icache2_sram_cs;
     wire icache2_sram_cs_next;
@@ -1372,7 +1373,7 @@ module DCCPU (
     assign icache2_sram_cs = icache2_sram_cs_reg;
     assign icache2_sram_cs_next = 
            inst_cache2_sram_we ||
-           ((inst_cache2_state == IC_NORMAL) && !inst_cache2_miss);
+           ((inst_cache2_state == IC_NORMAL) && !inst_cache2_miss && core2_ex_ready);
 
     reg [15:0] inst_cache1_rdata_reg;
     reg [5:0] inst_cache1_waddr_reg;
