@@ -1367,7 +1367,7 @@ module DCCPU (
     assign icache1_sram_cs = icache1_sram_cs_reg;
     assign icache1_sram_cs_next = 
            inst_cache1_sram_we ||
-           ((inst_cache1_state == IC_NORMAL) && !inst_cache1_miss && !core1_skid_valid);
+           ((inst_cache1_state == IC_NORMAL) && !inst_cache1_miss && (!core1_skid_valid || core1_ex_ready));
 
     wire icache2_sram_cs;
     wire icache2_sram_cs_next;
@@ -1376,7 +1376,7 @@ module DCCPU (
     assign icache2_sram_cs = icache2_sram_cs_reg;
     assign icache2_sram_cs_next = 
            inst_cache2_sram_we ||
-           ((inst_cache2_state == IC_NORMAL) && !inst_cache2_miss && !core2_skid_valid);
+           ((inst_cache2_state == IC_NORMAL) && !inst_cache2_miss && (!core2_skid_valid || core2_ex_ready));
 
     reg [15:0] inst_cache1_rdata_reg;
     reg [5:0] inst_cache1_waddr_reg;
@@ -1547,5 +1547,46 @@ module DCCPU (
         .OE  (1'b1),
         .CS  (icache2_sram_cs)
     );
+    // =========================================================================
+// ICLAB DEBUG DISPLAY BLOCK (注意：Demo 繳交前務必整段刪除或註解掉！ spec 24)
+// =========================================================================
+// 為了避免前 200 個 pattern 的資料刷滿螢幕，你可以用一個計數器或直接印出。
+// 這裡建議搭配轉存 log 檔觀察： > sim.log
 
+reg [31:0] cycle_cnt;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) cycle_cnt <= 0;
+    else cycle_cnt <= cycle_cnt + 1;
+end
+
+always @(negedge clk) begin
+    if (rst_n) begin
+        $display("--------------------------------------------------------------------------------");
+        $display("[Cycle %5d] Stall_1=%b | Core1_Active=%b | Core1_Step=%b", cycle_cnt, stall_1, core1_active, core1_step);
+        $display("  [PC 階段] PC=0x%04h | Next_PC=0x%04h | Diff_Cnt=%d", prog_counter_1, core1_next_pc, inst_cache_diff);
+        
+        $display("  [SRAM 訊號] CS_Next=%b -> CS_Reg=%b | Final_Addr_Reg=0x%02h | SRAM_RData=0x%04h", 
+                 icache1_sram_cs_next, icache1_sram_cs, final_ic1_sram_addr_reg, inst_cache1_sram_rdata);
+                 
+        $display("  [Cache 狀態] State=%d | Hit=%b | Miss_Recover=%b | Valid=%b | Tag_Reg=0x%02h", 
+                 inst_cache1_state, inst_cache1_hit, inst_cache1_miss_recover, inst_cache1_valid, inst_cache1_tag_reg);
+                 
+        $display("  [Skid Buffer] Valid=%b | Capture=%b | Skid_PC=0x%04h | Skid_Data=0x%04h", 
+                 core1_skid_valid, core1_skid_capture, core1_skid_pc, core1_skid_data);
+                 
+        $display("  [解碼/執行] IR_Valid=%b | IR=0x%04h | Opcode=3'b%b | RS_Idx=%d (Val=%d) | RT_Idx=%d (Val=%d)", 
+                 instruction_reg1_valid, instruction_reg1, core1_opcode, 
+                 core1_source_reg_idx, core1_source_reg_val, core1_target_reg_idx, core1_target_reg_val);
+
+        if (core1_reg_wr_en) begin
+            $display("  >>> 【Core 1 寫回暫存器】 MULT=%b | WB_Data=%d (0x%04h) | Dest_Idx=%d", 
+                     core1_is_MULT, core1_writeback_data, core1_writeback_data, 
+                     core1_is_MULT ? core1_dest_reg_idx : (core1_is_R ? core1_dest_reg_idx : core1_target_reg_idx));
+        end
+        
+        $display("  [暫存器群] r0:%d r1:%d r2:%d r3:%d r4:%d r5:%d r6:%d r7:%d", 
+                 core_1_r0, core_1_r1, core_1_r2, core_1_r3, core_1_r4, core_1_r5, core_1_r6, core_1_r7);
+    end
+end
+// =========================================================================
 endmodule
