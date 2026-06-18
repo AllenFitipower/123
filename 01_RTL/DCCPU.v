@@ -365,8 +365,7 @@ module DCCPU (
     wire        [ 2:0] booth_window;
     reg signed  [17:0] partial_product;
     wire signed [17:0] upper_half = mult_running ? $signed(product_reg[31:16]) : 18'sd0;
-    wire signed [17:0] mult_pp_iso = mult_running ? partial_product : 18'sd0;
-    wire signed [17:0] next_upper = upper_half + mult_pp_iso;
+    wire signed [17:0] next_upper = upper_half + partial_product;
     wire        [31:0] core1_mult_out;
     wire        [31:0] core2_mult_out;
 
@@ -502,13 +501,17 @@ module DCCPU (
     assign booth_window = {product_reg[1:0], booth_bit};
 
     always @(*) begin
-        case (booth_window)
-            3'b001, 3'b010: partial_product = $signed({{2{multiplicand[15]}}, multiplicand});
-            3'b101, 3'b110: partial_product = -$signed({{2{multiplicand[15]}}, multiplicand});
-            3'b011: partial_product = $signed({{2{multiplicand[15]}}, multiplicand}) <<< 1;
-            3'b100: partial_product = -$signed({{2{multiplicand[15]}}, multiplicand}) <<< 1;
-            default: partial_product = 18'sd0;
-        endcase
+        if (mult_running) begin
+            case (booth_window)
+                3'b001, 3'b010: partial_product = $signed({{2{multiplicand[15]}}, multiplicand});
+                3'b101, 3'b110: partial_product = -$signed({{2{multiplicand[15]}}, multiplicand});
+                3'b011: partial_product = $signed({{2{multiplicand[15]}}, multiplicand}) <<< 1;
+                3'b100: partial_product = -$signed({{2{multiplicand[15]}}, multiplicand}) <<< 1;
+                default: partial_product = 18'sd0;
+            endcase
+        end else begin
+            partial_product = 18'sd0;
+        end
     end
 
     always @(posedge mult_gclk or negedge rst_n) begin
@@ -1364,7 +1367,7 @@ module DCCPU (
     assign icache1_sram_cs = icache1_sram_cs_reg;
     assign icache1_sram_cs_next = 
            inst_cache1_sram_we ||
-           ((inst_cache1_state == IC_NORMAL) && !inst_cache1_miss && core1_ex_ready);
+           ((inst_cache1_state == IC_NORMAL) && !inst_cache1_miss);
 
     wire icache2_sram_cs;
     wire icache2_sram_cs_next;
@@ -1373,7 +1376,7 @@ module DCCPU (
     assign icache2_sram_cs = icache2_sram_cs_reg;
     assign icache2_sram_cs_next = 
            inst_cache2_sram_we ||
-           ((inst_cache2_state == IC_NORMAL) && !inst_cache2_miss && core2_ex_ready);
+           ((inst_cache2_state == IC_NORMAL) && !inst_cache2_miss);
 
     reg [15:0] inst_cache1_rdata_reg;
     reg [5:0] inst_cache1_waddr_reg;
