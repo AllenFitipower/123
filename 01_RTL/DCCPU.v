@@ -1356,7 +1356,7 @@ module DCCPU (
         .DI15(data_sram_wdata_reg[15]),
         .CK  (clk),
         .WEB (data_sram_web_reg),
-        .OE  (data_sram_web_reg),
+        .OE  (1'b1),
         .CS  (data_sram_cs_reg)
     );
 
@@ -1459,7 +1459,7 @@ module DCCPU (
         .DI15(inst_cache1_rdata_reg[15]),
         .CK  (clk),
         .WEB (inst_cache1_web_reg_sram),
-        .OE  (inst_cache1_web_reg_sram),
+        .OE  (1'b1),
         .CS  (icache1_sram_cs)
     );
 
@@ -1544,7 +1544,7 @@ module DCCPU (
         .DI15(inst_cache2_rdata_reg[15]),
         .CK  (clk),
         .WEB (inst_cache2_web_reg_sram),
-        .OE  (inst_cache2_web_reg_sram),
+        .OE  (1'b1),
         .CS  (icache2_sram_cs)
     );
 
