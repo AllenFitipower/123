@@ -551,23 +551,29 @@ module DCCPU (
     wire core1_is_sub_op = core1_is_SUBI || (core1_opcode == 3'b000 && (core1_func == 3'b001 || core1_func == 3'b111));
     wire core1_immediate_sel = core1_opcode[2] ^ core1_opcode[1];
     wire signed [15:0] core1_raw_op2 = core1_immediate_sel ? core1_immediate_ext : core1_target_reg_val;
-    wire signed [15:0] core1_adder_op_a = core1_source_reg_val;
-    wire signed [15:0] core1_adder_op_b_raw = core1_raw_op2;
+    wire core1_alu_en = core1_active && (core1_is_R || core1_is_ADDI || core1_is_SUBI);
+    wire signed [15:0] core1_adder_op_a = core1_alu_en ? core1_source_reg_val : 16'd0;
+    wire signed [15:0] core1_adder_op_b_raw = core1_alu_en ? core1_raw_op2 : 16'd0;
     wire signed [15:0] core1_alu_input_b = core1_is_sub_op ? ~core1_adder_op_b_raw : core1_adder_op_b_raw;
-    wire core1_alu_cin = core1_is_sub_op;
+    wire core1_alu_cin = core1_is_sub_op && core1_alu_en;
 
     wire core2_is_sub_op = core2_is_SUBI || (core2_opcode == 3'b000 && (core2_func == 3'b001 || core2_func == 3'b111));
     wire core2_immediate_sel = core2_opcode[2] ^ core2_opcode[1];
     wire signed [15:0] core2_raw_op2 = core2_immediate_sel ? core2_immediate_ext : core2_target_reg_val;
-    wire signed [15:0] core2_adder_op_a = core2_source_reg_val;
-    wire signed [15:0] core2_adder_op_b_raw = core2_raw_op2;
+    wire core2_alu_en = core2_active && (core2_is_R || core2_is_ADDI || core2_is_SUBI);
+    wire signed [15:0] core2_adder_op_a = core2_alu_en ? core2_source_reg_val : 16'd0;
+    wire signed [15:0] core2_adder_op_b_raw = core2_alu_en ? core2_raw_op2 : 16'd0;
     wire signed [15:0] core2_alu_input_b = core2_is_sub_op ? ~core2_adder_op_b_raw : core2_adder_op_b_raw;
-    wire core2_alu_cin = core2_is_sub_op;
+    wire core2_alu_cin = core2_is_sub_op && core2_alu_en;
 
     wire signed [16:0] core1_main_adder_result = {core1_adder_op_a[15], core1_adder_op_a} + {core1_alu_input_b[15], core1_alu_input_b} + core1_alu_cin;
     wire signed [16:0] core2_main_adder_result = {core2_adder_op_a[15], core2_adder_op_a} + {core2_alu_input_b[15], core2_alu_input_b} + core2_alu_cin;
-    wire [11:0] core1_mem_adder_result = core1_source_reg_val[11:0] + core1_immediate_ext[11:0];
-    wire [11:0] core2_mem_adder_result = core2_source_reg_val[11:0] + core2_immediate_ext[11:0];
+    wire [11:0] core1_mem_src_iso = core1_mem_calc_en ? core1_source_reg_val[11:0] : 12'd0;
+    wire [11:0] core1_mem_imm_iso = core1_mem_calc_en ? core1_immediate_ext[11:0] : 12'd0;
+    wire [11:0] core1_mem_adder_result = core1_mem_src_iso + core1_mem_imm_iso;
+    wire [11:0] core2_mem_src_iso = core2_mem_calc_en ? core2_source_reg_val[11:0] : 12'd0;
+    wire [11:0] core2_mem_imm_iso = core2_mem_calc_en ? core2_immediate_ext[11:0] : 12'd0;
+    wire [11:0] core2_mem_adder_result = core2_mem_src_iso + core2_mem_imm_iso;
 
     wire [15:0] core1_mem_addr = {
         2'b00,
