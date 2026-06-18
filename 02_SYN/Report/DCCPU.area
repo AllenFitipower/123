@@ -1,0 +1,33 @@
+ 
+****************************************
+Report : area
+Design : DCCPU
+Version: T-2022.03
+Date   : Wed Jun 17 23:11:37 2026
+****************************************
+
+Library(s) Used:
+
+    fsa0m_a_generic_core_ss1p62v125c (File: /RAID2/COURSE/BackUp/2023_Spring/iclab/iclabta01/UMC018_CBDK/CIC/SynopsysDC/db/fsa0m_a_generic_core_ss1p62v125c.db)
+    SRAM_ICACHE2_64x16_WC (File: /RAID2/COURSE/2026_Spring/iclab/iclab054/Final_Project/04_MEM/SRAM_ICACHE2_64x16_WC.db)
+    SRAM_ICACHE1_64x16_WC (File: /RAID2/COURSE/2026_Spring/iclab/iclab054/Final_Project/04_MEM/SRAM_ICACHE1_64x16_WC.db)
+    SRAM_DATA_64x16_WC (File: /RAID2/COURSE/2026_Spring/iclab/iclab054/Final_Project/04_MEM/SRAM_DATA_64x16_WC.db)
+
+Number of ports:                          326
+Number of nets:                          8347
+Number of cells:                         8175
+Number of combinational cells:           6994
+Number of sequential cells:              1173
+Number of macros/black boxes:               3
+Number of buf/inv:                       1780
+Number of references:                     132
+
+Combinational area:             121695.335543
+Buf/Inv area:                    16886.419101
+Noncombinational area:           69786.158955
+Macro/Black Box area:           143821.945312
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                335303.439810
+Total area:                 undefined
+1

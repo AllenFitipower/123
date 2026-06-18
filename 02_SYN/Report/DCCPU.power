@@ -1,0 +1,71 @@
+ 
+****************************************
+Report : power
+        -analysis_effort low
+Design : DCCPU
+Version: T-2022.03
+Date   : Wed Jun 17 23:11:37 2026
+****************************************
+
+
+Library(s) Used:
+
+    fsa0m_a_generic_core_ss1p62v125c (File: /RAID2/COURSE/BackUp/2023_Spring/iclab/iclabta01/UMC018_CBDK/CIC/SynopsysDC/db/fsa0m_a_generic_core_ss1p62v125c.db)
+    SRAM_ICACHE2_64x16_WC (File: /RAID2/COURSE/2026_Spring/iclab/iclab054/Final_Project/04_MEM/SRAM_ICACHE2_64x16_WC.db)
+    SRAM_ICACHE1_64x16_WC (File: /RAID2/COURSE/2026_Spring/iclab/iclab054/Final_Project/04_MEM/SRAM_ICACHE1_64x16_WC.db)
+    SRAM_DATA_64x16_WC (File: /RAID2/COURSE/2026_Spring/iclab/iclab054/Final_Project/04_MEM/SRAM_DATA_64x16_WC.db)
+
+
+Operating Conditions: WCCOM   Library: fsa0m_a_generic_core_ss1p62v125c
+Wire Load Model Mode: enclosed
+
+Design        Wire Load Model            Library
+------------------------------------------------
+DCCPU                  enG50K            fsa0m_a_generic_core_ss1p62v125c
+SNPS_CLOCK_GATE_HIGH_DCCPU_4
+                       enG5K             fsa0m_a_generic_core_ss1p62v125c
+SNPS_CLOCK_GATE_HIGH_DCCPU_3
+                       enG5K             fsa0m_a_generic_core_ss1p62v125c
+SNPS_CLOCK_GATE_HIGH_DCCPU_0
+                       enG5K             fsa0m_a_generic_core_ss1p62v125c
+SNPS_CLOCK_GATE_HIGH_DCCPU_1
+                       enG5K             fsa0m_a_generic_core_ss1p62v125c
+SNPS_CLOCK_GATE_HIGH_DCCPU_2
+                       enG5K             fsa0m_a_generic_core_ss1p62v125c
+
+
+Global Operating Voltage = 1.62 
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1pW
+
+
+Attributes
+----------
+i - Including register clock pin internal power
+
+
+  Cell Internal Power  =  12.9004 mW   (89%)
+  Net Switching Power  =   1.5162 mW   (11%)
+                         ---------
+Total Dynamic Power    =  14.4166 mW  (100%)
+
+Cell Leakage Power     =  21.6789 uW
+
+
+                 Internal         Switching           Leakage            Total
+Power Group      Power            Power               Power              Power   (   %    )  Attrs
+--------------------------------------------------------------------------------------------------
+io_pad             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+memory             5.0517        1.0525e-02        1.0454e+07            5.0727  (  35.13%)
+black_box          0.0000            0.0000            0.0000            0.0000  (   0.00%)
+clock_network      7.2672            0.1576        1.4494e+04            0.2294  (   1.59%)  i
+register           0.1222            0.1118        3.7510e+06            7.4331  (  51.48%)
+sequential         0.0000            0.0000            0.0000            0.0000  (   0.00%)
+combinational      0.4593            1.2363        7.4595e+06            1.7030  (  11.80%)
+--------------------------------------------------------------------------------------------------
+Total             12.9004 mW         1.5162 mW     2.1679e+07 pW        14.4382 mW
+1
