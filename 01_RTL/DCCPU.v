@@ -673,13 +673,13 @@ module DCCPU (
     wire core1_req = instruction_reg1_valid && (core1_mem_read || core1_mem_write);
     wire core2_req = instruction_reg2_valid && (core2_mem_read || core2_mem_write);
 
-    wire [5:0] core1_idx = core1_mem_calc_en ? core1_mem_addr[6:1] : 6'd0;
-    wire [5:0] core1_tag = core1_mem_calc_en ? {core1_mem_addr[13], core1_mem_addr[11:7]} : 6'd0;
-    wire [5:0] core2_idx = core2_mem_calc_en ? core2_mem_addr[6:1] : 6'd0;
-    wire [5:0] core2_tag = core2_mem_calc_en ? {core2_mem_addr[13], core2_mem_addr[11:7]} : 6'd0;
+    wire [5:0] core1_idx = core1_mem_addr[6:1];
+    wire [5:0] core1_tag = {core1_mem_addr[13], core1_mem_addr[11:7]};
+    wire [5:0] core2_idx = core2_mem_addr[6:1];
+    wire [5:0] core2_tag = {core2_mem_addr[13], core2_mem_addr[11:7]};
 
-    wire core1_hit = core1_mem_calc_en && data_cache_valid_array[core1_idx] && (data_cache_tag_array[core1_idx] == core1_tag);
-    wire core2_hit = core2_mem_calc_en && data_cache_valid_array[core2_idx] && (data_cache_tag_array[core2_idx] == core2_tag);
+    wire core1_hit = data_cache_valid_array[core1_idx] && (data_cache_tag_array[core1_idx] == core1_tag);
+    wire core2_hit = data_cache_valid_array[core2_idx] && (data_cache_tag_array[core2_idx] == core2_tag);
 
     wire same_mem_addr = ((core1_mem_read || core1_mem_write) && (core2_mem_read || core2_mem_write)) ?
                          (core1_mem_adder_result == core2_mem_adder_result) : 1'b0;
