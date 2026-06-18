@@ -722,15 +722,6 @@ module DCCPU (
     wire cache_fill_write_enable = dram_fill_beat && !(write_resp_pending && (data_fill_idx == pending_write_idx_reg));
     wire [15:0] cache_fill_data = rdata_m_inf_data;
 
-    // ===== Manual Clock Gating: Data Cache Tag Array =====
-    wire dcache_tag_gclk_en = cpu_write_enable || cache_fill_write_enable || dram_fill_done;
-    wire dcache_tag_gclk;
-    reg  dcache_tag_gclk_lat;
-    always @(*) begin
-        if (!clk) dcache_tag_gclk_lat = dcache_tag_gclk_en || !rst_n;
-    end
-    assign dcache_tag_gclk = clk & dcache_tag_gclk_lat;
-
     wire core1_ex_ready = (core1_req ? core1_done : 1'b1) && !sync_stall_1 && !core1_mult_stall_req;
     wire core2_ex_ready = (core2_req ? core2_done : 1'b1) && !sync_stall_2 && !core2_mult_stall_req;
 
@@ -1105,9 +1096,9 @@ module DCCPU (
         end
     end
 
-    // Data cache tag array and valid array on gated clock
+    // Data cache tag array and valid array
     integer i_tag;
-    always @(posedge dcache_tag_gclk or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             data_cache_valid_array <= 64'd0;
             for (i_tag = 0; i_tag < 64; i_tag = i_tag + 1) data_cache_tag_array[i_tag] <= 6'd0;

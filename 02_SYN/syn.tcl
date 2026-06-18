@@ -8,7 +8,7 @@
 # (A) Global Parameters
 #======================================================
 set DESIGN "DCCPU"
-set CYCLE 6
+set CYCLE 20
 set INPUT_DLY [expr 0.5*$CYCLE]
 set OUTPUT_DLY [expr 0.5*$CYCLE]
 
