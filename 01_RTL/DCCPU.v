@@ -1,6 +1,6 @@
 // Total execution cycles = 77015 cycles
 
-// 6ns 330519.371325
+// 6ns 335303.439810
 
 module DCCPU (
     // Input
@@ -263,7 +263,16 @@ module DCCPU (
     reg [12:7] inst_cache1_miss_address_reg;
     reg [12:7] inst_cache2_miss_address_reg;
 
-    always @(posedge clk or negedge rst_n) begin
+    wire miss_addr_gclk_en = (inst_cache1_state == IC_NORMAL && inst_cache1_miss) ||
+                             (inst_cache2_state == IC_NORMAL && inst_cache2_miss);
+    wire miss_addr_gclk;
+    reg miss_addr_gclk_lat;
+    always @(*) begin
+        if (!clk) miss_addr_gclk_lat = miss_addr_gclk_en || !rst_n;
+    end
+    assign miss_addr_gclk = clk & miss_addr_gclk_lat;
+
+    always @(posedge miss_addr_gclk or negedge rst_n) begin
         if (!rst_n) begin
             inst_cache1_miss_address_reg <= 6'd0;
             inst_cache2_miss_address_reg <= 6'd0;
@@ -492,14 +501,7 @@ module DCCPU (
         endcase
     end
 
-    wire gclk_mult_en = mult_start || mult_running;
-    reg gclk_mult_latch;
-    always @(*) begin
-        if (!clk) gclk_mult_latch = gclk_mult_en;
-    end
-    wire gclk_mult = clk & gclk_mult_latch;
-
-    always @(posedge gclk_mult or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             multiplier_counter <= 4'd0;
             mult_running       <= 1'b0;
@@ -729,13 +731,27 @@ module DCCPU (
 
     wire core1_is_alu = core1_is_R || core1_is_ADDI || core1_is_SUBI;
     wire core1_writeback_enable = core1_step && (core1_is_alu || (core1_is_LOAD && core1_done));
-    wire [15:0] core1_writeback_data = core1_is_LOAD ? core1_mem_rdata : core1_alu_out;
-    wire [2:0] core1_writeback_dest = core1_is_R ? core1_dest_reg_idx : core1_target_reg_idx;
+    wire [15:0] core1_writeback_data = core1_is_LOAD ? (core1_done ? core1_mem_rdata : 16'd0) : core1_alu_out;
+    wire core1_writeback_to_r0 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd0) || (!core1_is_R && core1_target_reg_idx == 3'd0));
+    wire core1_writeback_to_r1 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd1) || (!core1_is_R && core1_target_reg_idx == 3'd1));
+    wire core1_writeback_to_r2 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd2) || (!core1_is_R && core1_target_reg_idx == 3'd2));
+    wire core1_writeback_to_r3 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd3) || (!core1_is_R && core1_target_reg_idx == 3'd3));
+    wire core1_writeback_to_r4 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd4) || (!core1_is_R && core1_target_reg_idx == 3'd4));
+    wire core1_writeback_to_r5 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd5) || (!core1_is_R && core1_target_reg_idx == 3'd5));
+    wire core1_writeback_to_r6 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd6) || (!core1_is_R && core1_target_reg_idx == 3'd6));
+    wire core1_writeback_to_r7 = core1_writeback_enable && ((core1_is_R && core1_dest_reg_idx == 3'd7) || (!core1_is_R && core1_target_reg_idx == 3'd7));
 
     wire core2_is_alu = core2_is_R || core2_is_ADDI || core2_is_SUBI;
     wire core2_writeback_enable = core2_step && (core2_is_alu || (core2_is_LOAD && core2_done));
-    wire [15:0] core2_writeback_data = core2_is_LOAD ? core2_mem_rdata : core2_alu_out;
-    wire [2:0] core2_writeback_dest = core2_is_R ? core2_dest_reg_idx : core2_target_reg_idx;
+    wire [15:0] core2_writeback_data = core2_is_LOAD ? (core2_done ? core2_mem_rdata : 16'd0) : core2_alu_out;
+    wire core2_writeback_to_r0 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd0) || (!core2_is_R && core2_target_reg_idx == 3'd0));
+    wire core2_writeback_to_r1 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd1) || (!core2_is_R && core2_target_reg_idx == 3'd1));
+    wire core2_writeback_to_r2 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd2) || (!core2_is_R && core2_target_reg_idx == 3'd2));
+    wire core2_writeback_to_r3 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd3) || (!core2_is_R && core2_target_reg_idx == 3'd3));
+    wire core2_writeback_to_r4 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd4) || (!core2_is_R && core2_target_reg_idx == 3'd4));
+    wire core2_writeback_to_r5 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd5) || (!core2_is_R && core2_target_reg_idx == 3'd5));
+    wire core2_writeback_to_r6 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd6) || (!core2_is_R && core2_target_reg_idx == 3'd6));
+    wire core2_writeback_to_r7 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd7) || (!core2_is_R && core2_target_reg_idx == 3'd7));
 
     wire [12:0] core1_imm_addr_offset = core1_branch_calc_en ? {core1_immediate_ext[11:0], 1'b0} : 13'd0;
     wire [12:0] core1_branch_base_pc = core1_branch_calc_en ? core1_pc_plus_2_ex : 13'd0;
@@ -769,7 +785,15 @@ module DCCPU (
     wire core1_skid_capture = !core1_ex_ready && !core1_skid_valid && fetch_valid_1;
     wire core2_skid_capture = !core2_ex_ready && !core2_skid_valid && fetch_valid_2;
 
-    always @(posedge clk or negedge rst_n) begin
+    wire core1_skid_gclk_en = core1_skid_capture || (core1_ex_ready && core1_skid_valid);
+    wire core1_skid_gclk;
+    reg core1_skid_gclk_lat;
+    always @(*) begin
+        if (!clk) core1_skid_gclk_lat = core1_skid_gclk_en || !rst_n;
+    end
+    assign core1_skid_gclk = clk & core1_skid_gclk_lat;
+
+    always @(posedge core1_skid_gclk or negedge rst_n) begin
         if (!rst_n) begin
             core1_skid_valid <= 1'b0;
             core1_skid_data  <= 16'd0;
@@ -785,7 +809,15 @@ module DCCPU (
         end
     end
 
-    always @(posedge clk or negedge rst_n) begin
+    wire core2_skid_gclk_en = core2_skid_capture || (core2_ex_ready && core2_skid_valid);
+    wire core2_skid_gclk;
+    reg core2_skid_gclk_lat;
+    always @(*) begin
+        if (!clk) core2_skid_gclk_lat = core2_skid_gclk_en || !rst_n;
+    end
+    assign core2_skid_gclk = clk & core2_skid_gclk_lat;
+
+    always @(posedge core2_skid_gclk or negedge rst_n) begin
         if (!rst_n) begin
             core2_skid_valid <= 1'b0;
             core2_skid_data  <= 16'd0;
@@ -805,10 +837,16 @@ module DCCPU (
         if (!rst_n) begin
             fetch_valid_1 <= 1'b0;
             prog_counter_1_if2 <= 13'd0;
+            fetch_valid_2 <= 1'b0;
+            prog_counter_2_if2 <= 13'd0;
             instruction_reg1_reg <= 16'd0;
             instruction_reg1_valid <= 1'b0;
             prog_counter_1_ex <= 13'd0;
+            instruction_reg2_reg <= 16'd0;
+            instruction_reg2_valid <= 1'b0;
+            prog_counter_2_ex <= 13'd0;
             core1_pc_plus_2_ex <= 13'd0;
+            core2_pc_plus_2_ex <= 13'd0;
         end else begin
             if (core1_ex_ready) begin
                 if (core1_flush || icache1_wait_read) begin
@@ -834,18 +872,7 @@ module DCCPU (
                     end
                 end
             end
-        end
-    end
 
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            fetch_valid_2 <= 1'b0;
-            prog_counter_2_if2 <= 13'd0;
-            instruction_reg2_reg <= 16'd0;
-            instruction_reg2_valid <= 1'b0;
-            prog_counter_2_ex <= 13'd0;
-            core2_pc_plus_2_ex <= 13'd0;
-        end else begin
             if (core2_ex_ready) begin
                 if (core2_flush || icache2_wait_read) begin
                     fetch_valid_2 <= 1'b0;
@@ -978,7 +1005,16 @@ module DCCPU (
     wire inst_cache1_fill_done = inst_cache1_state == IC_R_FILL && rlast_m_inf_inst_1 && rvalid_m_inf_inst_1;
     wire inst_cache2_fill_done = inst_cache2_state == IC_R_FILL && rlast_m_inf_inst_2 && rvalid_m_inf_inst_2;
 
-    always @(posedge clk or negedge rst_n) begin
+    wire icache_recover_gclk_en = inst_cache1_fill_done || inst_cache1_miss_recover ||
+                                  inst_cache2_fill_done || inst_cache2_miss_recover;
+    wire icache_recover_gclk;
+    reg icache_recover_gclk_lat;
+    always @(*) begin
+        if (!clk) icache_recover_gclk_lat = icache_recover_gclk_en || !rst_n;
+    end
+    assign icache_recover_gclk = clk & icache_recover_gclk_lat;
+
+    always @(posedge icache_recover_gclk or negedge rst_n) begin
         if (!rst_n) begin
             inst_cache1_miss_recover <= 1'b0;
             inst_cache2_miss_recover <= 1'b0;
@@ -1021,20 +1057,20 @@ module DCCPU (
     end
 
     integer i_tag;
-    wire gclk_dcache_tag_en = cpu_write_enable || cache_fill_write_enable;
-    reg gclk_dcache_tag_latch;
-    always @(*) begin
-        if (!clk) gclk_dcache_tag_latch = gclk_dcache_tag_en;
-    end
-    wire gclk_dcache_tag = clk & gclk_dcache_tag_latch;
-
-    always @(posedge gclk_dcache_tag or negedge rst_n) begin
+    always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            cache_just_filled <= 1'b0;
             data_cache_valid_array <= 64'd0;
+            filled_data_reg <= 16'd0;
             for (i_tag = 0; i_tag < 64; i_tag = i_tag + 1) data_cache_tag_array[i_tag] <= 6'd0;
         end else begin
+            if (dram_fill_beat && data_fill_is_request) filled_data_reg <= rdata_m_inf_data;
+            if (dram_fill_done) begin
+                cache_just_filled <= 1'b1;
+            end else cache_just_filled <= 1'b0;
+
             if (cpu_write_enable) begin
-                data_cache_valid_array[core2_write_issue ? core2_idx : core1_idx] <= 1'b1;
+                data_cache_valid_array[core2_write_issue?core2_idx : core1_idx] <= 1'b1;
                 data_cache_tag_array[core2_write_issue ? core2_idx : core1_idx]   <= core2_write_issue ? core2_tag : core1_tag;
             end else if (cache_fill_write_enable) begin
                 data_cache_valid_array[data_fill_cnt] <= 1'b1;
@@ -1045,25 +1081,6 @@ module DCCPU (
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            cache_just_filled <= 1'b0;
-            filled_data_reg <= 16'd0;
-        end else begin
-            if (dram_fill_beat && data_fill_is_request) filled_data_reg <= rdata_m_inf_data;
-            if (dram_fill_done) begin
-                cache_just_filled <= 1'b1;
-            end else cache_just_filled <= 1'b0;
-        end
-    end
-
-    wire gclk_core1_rf_en = (core1_is_R || core1_is_ADDI || core1_is_SUBI || core1_is_LOAD || core1_is_MULT) && instruction_reg1_valid;
-    reg gclk_core1_rf_latch;
-    always @(*) begin
-        if (!clk) gclk_core1_rf_latch = gclk_core1_rf_en;
-    end
-    wire gclk_core1_rf = clk & gclk_core1_rf_latch;
-
-    always @(posedge gclk_core1_rf or negedge rst_n) begin
-        if (!rst_n) begin
             core_1_r0 <= 16'd0;
             core_1_r1 <= 16'd0;
             core_1_r2 <= 16'd0;
@@ -1072,57 +1089,6 @@ module DCCPU (
             core_1_r5 <= 16'd0;
             core_1_r6 <= 16'd0;
             core_1_r7 <= 16'd0;
-        end else begin
-            if ((core1_is_MULT && core1_step) || core1_writeback_enable) begin
-                if (core1_is_MULT) begin
-                    if (core1_low_reg_idx == 3'd0) core_1_r0 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd0) core_1_r0 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd1) core_1_r1 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd1) core_1_r1 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd2) core_1_r2 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd2) core_1_r2 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd3) core_1_r3 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd3) core_1_r3 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd4) core_1_r4 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd4) core_1_r4 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd5) core_1_r5 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd5) core_1_r5 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd6) core_1_r6 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd6) core_1_r6 <= core1_mult_out[31:16];
-
-                    if (core1_low_reg_idx == 3'd7) core_1_r7 <= core1_mult_out[15:0];
-                    else if (core1_dest_reg_idx == 3'd7) core_1_r7 <= core1_mult_out[31:16];
-                end else begin
-                    case (core1_writeback_dest)
-                        3'd0: core_1_r0 <= core1_writeback_data;
-                        3'd1: core_1_r1 <= core1_writeback_data;
-                        3'd2: core_1_r2 <= core1_writeback_data;
-                        3'd3: core_1_r3 <= core1_writeback_data;
-                        3'd4: core_1_r4 <= core1_writeback_data;
-                        3'd5: core_1_r5 <= core1_writeback_data;
-                        3'd6: core_1_r6 <= core1_writeback_data;
-                        3'd7: core_1_r7 <= core1_writeback_data;
-                    endcase
-                end
-            end
-        end
-    end
-
-    wire gclk_core2_rf_en = (core2_is_R || core2_is_ADDI || core2_is_SUBI || core2_is_LOAD || core2_is_MULT) && instruction_reg2_valid;
-    reg gclk_core2_rf_latch;
-    always @(*) begin
-        if (!clk) gclk_core2_rf_latch = gclk_core2_rf_en;
-    end
-    wire gclk_core2_rf = clk & gclk_core2_rf_latch;
-
-    always @(posedge gclk_core2_rf or negedge rst_n) begin
-        if (!rst_n) begin
             core_2_r0 <= 16'd0;
             core_2_r1 <= 16'd0;
             core_2_r2 <= 16'd0;
@@ -1131,49 +1097,6 @@ module DCCPU (
             core_2_r5 <= 16'd0;
             core_2_r6 <= 16'd0;
             core_2_r7 <= 16'd0;
-        end else begin
-            if ((core2_is_MULT && core2_step) || core2_writeback_enable) begin
-                if (core2_is_MULT) begin
-                    if (core2_low_reg_idx == 3'd0) core_2_r0 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd0) core_2_r0 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd1) core_2_r1 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd1) core_2_r1 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd2) core_2_r2 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd2) core_2_r2 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd3) core_2_r3 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd3) core_2_r3 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd4) core_2_r4 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd4) core_2_r4 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd5) core_2_r5 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd5) core_2_r5 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd6) core_2_r6 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd6) core_2_r6 <= core2_mult_out[31:16];
-
-                    if (core2_low_reg_idx == 3'd7) core_2_r7 <= core2_mult_out[15:0];
-                    else if (core2_dest_reg_idx == 3'd7) core_2_r7 <= core2_mult_out[31:16];
-                end else begin
-                    case (core2_writeback_dest)
-                        3'd0: core_2_r0 <= core2_writeback_data;
-                        3'd1: core_2_r1 <= core2_writeback_data;
-                        3'd2: core_2_r2 <= core2_writeback_data;
-                        3'd3: core_2_r3 <= core2_writeback_data;
-                        3'd4: core_2_r4 <= core2_writeback_data;
-                        3'd5: core_2_r5 <= core2_writeback_data;
-                        3'd6: core_2_r6 <= core2_writeback_data;
-                        3'd7: core_2_r7 <= core2_writeback_data;
-                    endcase
-                end
-            end
-        end
-    end
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
             prog_counter_1 <= 13'd0;
             prog_counter_2 <= 13'd0;
             inst_cache_diff <= 2'd0;
@@ -1181,17 +1104,95 @@ module DCCPU (
             if (prog_counter_1 != core1_next_pc) prog_counter_1 <= core1_next_pc;
             if (prog_counter_2 != core2_next_pc) prog_counter_2 <= core2_next_pc;
 
-            case ({core1_step, core2_step})
+            case ({
+                core1_step, core2_step
+            })
                 2'b10: inst_cache_diff <= inst_cache_diff + 2'd1;
                 2'b01: inst_cache_diff <= inst_cache_diff - 2'd1;
             endcase
+
+            if ((core1_is_MULT && core1_step) || core1_writeback_enable) begin
+                if (core1_is_MULT) begin
+                    case (core1_dest_reg_idx)
+                        3'd0: core_1_r0 <= core1_mult_out[31:16];
+                        3'd1: core_1_r1 <= core1_mult_out[31:16];
+                        3'd2: core_1_r2 <= core1_mult_out[31:16];
+                        3'd3: core_1_r3 <= core1_mult_out[31:16];
+                        3'd4: core_1_r4 <= core1_mult_out[31:16];
+                        3'd5: core_1_r5 <= core1_mult_out[31:16];
+                        3'd6: core_1_r6 <= core1_mult_out[31:16];
+                        3'd7: core_1_r7 <= core1_mult_out[31:16];
+                    endcase
+                    case (core1_low_reg_idx)
+                        3'd0: core_1_r0 <= core1_mult_out[15:0];
+                        3'd1: core_1_r1 <= core1_mult_out[15:0];
+                        3'd2: core_1_r2 <= core1_mult_out[15:0];
+                        3'd3: core_1_r3 <= core1_mult_out[15:0];
+                        3'd4: core_1_r4 <= core1_mult_out[15:0];
+                        3'd5: core_1_r5 <= core1_mult_out[15:0];
+                        3'd6: core_1_r6 <= core1_mult_out[15:0];
+                        3'd7: core_1_r7 <= core1_mult_out[15:0];
+                    endcase
+                end else begin
+                    if (core1_writeback_to_r0) core_1_r0 <= core1_writeback_data;
+                    if (core1_writeback_to_r1) core_1_r1 <= core1_writeback_data;
+                    if (core1_writeback_to_r2) core_1_r2 <= core1_writeback_data;
+                    if (core1_writeback_to_r3) core_1_r3 <= core1_writeback_data;
+                    if (core1_writeback_to_r4) core_1_r4 <= core1_writeback_data;
+                    if (core1_writeback_to_r5) core_1_r5 <= core1_writeback_data;
+                    if (core1_writeback_to_r6) core_1_r6 <= core1_writeback_data;
+                    if (core1_writeback_to_r7) core_1_r7 <= core1_writeback_data;
+                end
+            end
+
+            if ((core2_is_MULT && core2_step) || core2_writeback_enable) begin
+                if (core2_is_MULT) begin
+                    case (core2_dest_reg_idx)
+                        3'd0: core_2_r0 <= core2_mult_out[31:16];
+                        3'd1: core_2_r1 <= core2_mult_out[31:16];
+                        3'd2: core_2_r2 <= core2_mult_out[31:16];
+                        3'd3: core_2_r3 <= core2_mult_out[31:16];
+                        3'd4: core_2_r4 <= core2_mult_out[31:16];
+                        3'd5: core_2_r5 <= core2_mult_out[31:16];
+                        3'd6: core_2_r6 <= core2_mult_out[31:16];
+                        3'd7: core_2_r7 <= core2_mult_out[31:16];
+                    endcase
+                    case (core2_low_reg_idx)
+                        3'd0: core_2_r0 <= core2_mult_out[15:0];
+                        3'd1: core_2_r1 <= core2_mult_out[15:0];
+                        3'd2: core_2_r2 <= core2_mult_out[15:0];
+                        3'd3: core_2_r3 <= core2_mult_out[15:0];
+                        3'd4: core_2_r4 <= core2_mult_out[15:0];
+                        3'd5: core_2_r5 <= core2_mult_out[15:0];
+                        3'd6: core_2_r6 <= core2_mult_out[15:0];
+                        3'd7: core_2_r7 <= core2_mult_out[15:0];
+                    endcase
+                end else begin
+                    if (core2_writeback_to_r0) core_2_r0 <= core2_writeback_data;
+                    if (core2_writeback_to_r1) core_2_r1 <= core2_writeback_data;
+                    if (core2_writeback_to_r2) core_2_r2 <= core2_writeback_data;
+                    if (core2_writeback_to_r3) core_2_r3 <= core2_writeback_data;
+                    if (core2_writeback_to_r4) core_2_r4 <= core2_writeback_data;
+                    if (core2_writeback_to_r5) core_2_r5 <= core2_writeback_data;
+                    if (core2_writeback_to_r6) core_2_r6 <= core2_writeback_data;
+                    if (core2_writeback_to_r7) core_2_r7 <= core2_writeback_data;
+                end
+            end
         end
     end
 
     reg [15:0] data_fill_wdata_reg;
     reg [ 5:0] data_fill_waddr_reg;
 
-    always @(posedge clk or negedge rst_n) begin
+    wire data_read_gclk_en = data_read_issue || data_read_pending;
+    wire data_read_gclk;
+    reg data_read_gclk_lat;
+    always @(*) begin
+        if (!clk) data_read_gclk_lat = data_read_gclk_en || !rst_n;
+    end
+    assign data_read_gclk = clk & data_read_gclk_lat;
+
+    always @(posedge data_read_gclk or negedge rst_n) begin
         if (!rst_n) begin
             data_read_pending <= 1'b0;
             data_read_owner_core2 <= 1'b0;
@@ -1231,9 +1232,9 @@ module DCCPU (
                                         (core2_write_issue ? core2_mem_wdata : core1_mem_wdata);
     wire data_sram_we_next = final_data_sram_we;
     wire data_sram_cs_next = final_data_sram_we || data_read_issue;
-    
+
     wire core2_addr_sel = core2_write_issue || data_read_issue_core2;
-    wire [5:0] data_sram_addr_next = 
+    wire [5:0] data_sram_addr_next =
         data_fill_write_enable_reg ? data_fill_waddr_reg :
         core2_addr_sel ? core2_idx : core1_idx;
 
@@ -1330,7 +1331,7 @@ module DCCPU (
     reg inst_cache1_web_reg_sram;
 
     wire [ 5:0] inst_cache1_sram_addr = (inst_cache1_state == IC_R_FILL) ? inst_cache1_fill_cnt : prog_counter_1[6:1];
-    
+
     reg [5:0] final_ic1_sram_addr_reg;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
