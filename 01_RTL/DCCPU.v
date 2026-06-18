@@ -248,10 +248,11 @@ module DCCPU (
         endcase
     end
 
+    wire icache1_filling = (inst_cache1_state == IC_AR_REQ) || (inst_cache1_state == IC_R_FILL);
     always @(*) begin
         next_inst_cache2_state = inst_cache2_state;
         case (inst_cache2_state)
-            IC_NORMAL: if (inst_cache2_miss) next_inst_cache2_state = IC_AR_REQ;
+            IC_NORMAL: if (inst_cache2_miss && !icache1_filling) next_inst_cache2_state = IC_AR_REQ;
             IC_AR_REQ:
             if (arvalid_m_inf_inst_2 && arready_m_inf_inst_2) next_inst_cache2_state = IC_R_FILL;
             IC_R_FILL:
