@@ -794,8 +794,8 @@ module DCCPU (
     wire [12:0] core1_branch_base_pc = core1_branch_calc_en ? core1_pc_plus_2_ex : 13'd0;
     wire [12:0] core1_branch_target = core1_branch_base_pc + core1_imm_addr_offset;
 
-    assign icache1_wait_read = (inst_cache1_state != IC_NORMAL) || inst_cache1_miss || inst_cache1_miss_recover || !icache1_sram_cs_reg;
-    assign icache2_wait_read = (inst_cache2_state != IC_NORMAL) || inst_cache2_miss || inst_cache2_miss_recover || !icache2_sram_cs_reg;
+    assign icache1_wait_read = (inst_cache1_state != IC_NORMAL) || inst_cache1_miss || inst_cache1_miss_recover || (!icache1_sram_cs_reg && !core1_skid_valid);
+    assign icache2_wait_read = (inst_cache2_state != IC_NORMAL) || inst_cache2_miss || inst_cache2_miss_recover || (!icache2_sram_cs_reg && !core2_skid_valid);
 
     wire [12:0] core1_next_pc = 
         (!core1_ex_ready)             ? prog_counter_1 :             
@@ -886,7 +886,7 @@ module DCCPU (
             core2_pc_plus_2_ex <= 13'd0;
         end else begin
             if (core1_ex_ready) begin
-                if (core1_flush || icache1_wait_read) begin
+                if (core1_flush || icache1_wait_read || !icache1_sram_cs_reg) begin
                     fetch_valid_1 <= 1'b0;
                 end else begin
                     fetch_valid_1      <= 1'b1;
@@ -911,7 +911,7 @@ module DCCPU (
             end
 
             if (core2_ex_ready) begin
-                if (core2_flush || icache2_wait_read) begin
+                if (core2_flush || icache2_wait_read || !icache2_sram_cs_reg) begin
                     fetch_valid_2 <= 1'b0;
                 end else begin
                     fetch_valid_2      <= 1'b1;
