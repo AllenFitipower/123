@@ -501,7 +501,7 @@ module DCCPU (
         endcase
     end
 
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge mult_gclk or negedge rst_n) begin
         if (!rst_n) begin
             multiplier_counter <= 4'd0;
             mult_running       <= 1'b0;
@@ -833,7 +833,7 @@ module DCCPU (
         end
     end
 
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge pipe_gclk or negedge rst_n) begin
         if (!rst_n) begin
             fetch_valid_1 <= 1'b0;
             prog_counter_1_if2 <= 13'd0;
@@ -916,7 +916,7 @@ module DCCPU (
         endcase
     end
 
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge axi_state_gclk or negedge rst_n) begin
         if (!rst_n) begin
             state <= NORMAL;
             axi_addr_reg <= 13'd0;
@@ -956,7 +956,7 @@ module DCCPU (
         end
     end
 
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge axi_state_gclk or negedge rst_n) begin
         if (!rst_n) begin
             axi_aw_done <= 1'b0;
             axi_w_done <= 1'b0;
@@ -1056,19 +1056,26 @@ module DCCPU (
         end
     end
 
-    integer i_tag;
+    // cache_just_filled and filled_data_reg stay on normal clk (small, frequently checked)
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             cache_just_filled <= 1'b0;
-            data_cache_valid_array <= 64'd0;
             filled_data_reg <= 16'd0;
-            for (i_tag = 0; i_tag < 64; i_tag = i_tag + 1) data_cache_tag_array[i_tag] <= 6'd0;
         end else begin
             if (dram_fill_beat && data_fill_is_request) filled_data_reg <= rdata_m_inf_data;
             if (dram_fill_done) begin
                 cache_just_filled <= 1'b1;
             end else cache_just_filled <= 1'b0;
+        end
+    end
 
+    // Data cache tag array and valid array on gated clock
+    integer i_tag;
+    always @(posedge dcache_tag_gclk or negedge rst_n) begin
+        if (!rst_n) begin
+            data_cache_valid_array <= 64'd0;
+            for (i_tag = 0; i_tag < 64; i_tag = i_tag + 1) data_cache_tag_array[i_tag] <= 6'd0;
+        end else begin
             if (cpu_write_enable) begin
                 data_cache_valid_array[core2_write_issue?core2_idx : core1_idx] <= 1'b1;
                 data_cache_tag_array[core2_write_issue ? core2_idx : core1_idx]   <= core2_write_issue ? core2_tag : core1_tag;
@@ -1079,24 +1086,9 @@ module DCCPU (
         end
     end
 
+    // PC and inst_cache_diff on normal clk
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            core_1_r0 <= 16'd0;
-            core_1_r1 <= 16'd0;
-            core_1_r2 <= 16'd0;
-            core_1_r3 <= 16'd0;
-            core_1_r4 <= 16'd0;
-            core_1_r5 <= 16'd0;
-            core_1_r6 <= 16'd0;
-            core_1_r7 <= 16'd0;
-            core_2_r0 <= 16'd0;
-            core_2_r1 <= 16'd0;
-            core_2_r2 <= 16'd0;
-            core_2_r3 <= 16'd0;
-            core_2_r4 <= 16'd0;
-            core_2_r5 <= 16'd0;
-            core_2_r6 <= 16'd0;
-            core_2_r7 <= 16'd0;
             prog_counter_1 <= 13'd0;
             prog_counter_2 <= 13'd0;
             inst_cache_diff <= 2'd0;
@@ -1110,76 +1102,158 @@ module DCCPU (
                 2'b10: inst_cache_diff <= inst_cache_diff + 2'd1;
                 2'b01: inst_cache_diff <= inst_cache_diff - 2'd1;
             endcase
+        end
+    end
 
-            if ((core1_is_MULT && core1_step) || core1_writeback_enable) begin
-                if (core1_is_MULT) begin
-                    case (core1_dest_reg_idx)
-                        3'd0: core_1_r0 <= core1_mult_out[31:16];
-                        3'd1: core_1_r1 <= core1_mult_out[31:16];
-                        3'd2: core_1_r2 <= core1_mult_out[31:16];
-                        3'd3: core_1_r3 <= core1_mult_out[31:16];
-                        3'd4: core_1_r4 <= core1_mult_out[31:16];
-                        3'd5: core_1_r5 <= core1_mult_out[31:16];
-                        3'd6: core_1_r6 <= core1_mult_out[31:16];
-                        3'd7: core_1_r7 <= core1_mult_out[31:16];
-                    endcase
-                    case (core1_low_reg_idx)
-                        3'd0: core_1_r0 <= core1_mult_out[15:0];
-                        3'd1: core_1_r1 <= core1_mult_out[15:0];
-                        3'd2: core_1_r2 <= core1_mult_out[15:0];
-                        3'd3: core_1_r3 <= core1_mult_out[15:0];
-                        3'd4: core_1_r4 <= core1_mult_out[15:0];
-                        3'd5: core_1_r5 <= core1_mult_out[15:0];
-                        3'd6: core_1_r6 <= core1_mult_out[15:0];
-                        3'd7: core_1_r7 <= core1_mult_out[15:0];
-                    endcase
-                end else begin
-                    if (core1_writeback_to_r0) core_1_r0 <= core1_writeback_data;
-                    if (core1_writeback_to_r1) core_1_r1 <= core1_writeback_data;
-                    if (core1_writeback_to_r2) core_1_r2 <= core1_writeback_data;
-                    if (core1_writeback_to_r3) core_1_r3 <= core1_writeback_data;
-                    if (core1_writeback_to_r4) core_1_r4 <= core1_writeback_data;
-                    if (core1_writeback_to_r5) core_1_r5 <= core1_writeback_data;
-                    if (core1_writeback_to_r6) core_1_r6 <= core1_writeback_data;
-                    if (core1_writeback_to_r7) core_1_r7 <= core1_writeback_data;
-                end
-            end
-
-            if ((core2_is_MULT && core2_step) || core2_writeback_enable) begin
-                if (core2_is_MULT) begin
-                    case (core2_dest_reg_idx)
-                        3'd0: core_2_r0 <= core2_mult_out[31:16];
-                        3'd1: core_2_r1 <= core2_mult_out[31:16];
-                        3'd2: core_2_r2 <= core2_mult_out[31:16];
-                        3'd3: core_2_r3 <= core2_mult_out[31:16];
-                        3'd4: core_2_r4 <= core2_mult_out[31:16];
-                        3'd5: core_2_r5 <= core2_mult_out[31:16];
-                        3'd6: core_2_r6 <= core2_mult_out[31:16];
-                        3'd7: core_2_r7 <= core2_mult_out[31:16];
-                    endcase
-                    case (core2_low_reg_idx)
-                        3'd0: core_2_r0 <= core2_mult_out[15:0];
-                        3'd1: core_2_r1 <= core2_mult_out[15:0];
-                        3'd2: core_2_r2 <= core2_mult_out[15:0];
-                        3'd3: core_2_r3 <= core2_mult_out[15:0];
-                        3'd4: core_2_r4 <= core2_mult_out[15:0];
-                        3'd5: core_2_r5 <= core2_mult_out[15:0];
-                        3'd6: core_2_r6 <= core2_mult_out[15:0];
-                        3'd7: core_2_r7 <= core2_mult_out[15:0];
-                    endcase
-                end else begin
-                    if (core2_writeback_to_r0) core_2_r0 <= core2_writeback_data;
-                    if (core2_writeback_to_r1) core_2_r1 <= core2_writeback_data;
-                    if (core2_writeback_to_r2) core_2_r2 <= core2_writeback_data;
-                    if (core2_writeback_to_r3) core_2_r3 <= core2_writeback_data;
-                    if (core2_writeback_to_r4) core_2_r4 <= core2_writeback_data;
-                    if (core2_writeback_to_r5) core_2_r5 <= core2_writeback_data;
-                    if (core2_writeback_to_r6) core_2_r6 <= core2_writeback_data;
-                    if (core2_writeback_to_r7) core_2_r7 <= core2_writeback_data;
-                end
+    // Core 1 register file on gated clock
+    always @(posedge core1_reg_gclk or negedge rst_n) begin
+        if (!rst_n) begin
+            core_1_r0 <= 16'd0;
+            core_1_r1 <= 16'd0;
+            core_1_r2 <= 16'd0;
+            core_1_r3 <= 16'd0;
+            core_1_r4 <= 16'd0;
+            core_1_r5 <= 16'd0;
+            core_1_r6 <= 16'd0;
+            core_1_r7 <= 16'd0;
+        end else begin
+            if (core1_is_MULT) begin
+                case (core1_dest_reg_idx)
+                    3'd0: core_1_r0 <= core1_mult_out[31:16];
+                    3'd1: core_1_r1 <= core1_mult_out[31:16];
+                    3'd2: core_1_r2 <= core1_mult_out[31:16];
+                    3'd3: core_1_r3 <= core1_mult_out[31:16];
+                    3'd4: core_1_r4 <= core1_mult_out[31:16];
+                    3'd5: core_1_r5 <= core1_mult_out[31:16];
+                    3'd6: core_1_r6 <= core1_mult_out[31:16];
+                    3'd7: core_1_r7 <= core1_mult_out[31:16];
+                endcase
+                case (core1_low_reg_idx)
+                    3'd0: core_1_r0 <= core1_mult_out[15:0];
+                    3'd1: core_1_r1 <= core1_mult_out[15:0];
+                    3'd2: core_1_r2 <= core1_mult_out[15:0];
+                    3'd3: core_1_r3 <= core1_mult_out[15:0];
+                    3'd4: core_1_r4 <= core1_mult_out[15:0];
+                    3'd5: core_1_r5 <= core1_mult_out[15:0];
+                    3'd6: core_1_r6 <= core1_mult_out[15:0];
+                    3'd7: core_1_r7 <= core1_mult_out[15:0];
+                endcase
+            end else begin
+                if (core1_writeback_to_r0) core_1_r0 <= core1_writeback_data;
+                if (core1_writeback_to_r1) core_1_r1 <= core1_writeback_data;
+                if (core1_writeback_to_r2) core_1_r2 <= core1_writeback_data;
+                if (core1_writeback_to_r3) core_1_r3 <= core1_writeback_data;
+                if (core1_writeback_to_r4) core_1_r4 <= core1_writeback_data;
+                if (core1_writeback_to_r5) core_1_r5 <= core1_writeback_data;
+                if (core1_writeback_to_r6) core_1_r6 <= core1_writeback_data;
+                if (core1_writeback_to_r7) core_1_r7 <= core1_writeback_data;
             end
         end
     end
+
+    // Core 2 register file on gated clock
+    always @(posedge core2_reg_gclk or negedge rst_n) begin
+        if (!rst_n) begin
+            core_2_r0 <= 16'd0;
+            core_2_r1 <= 16'd0;
+            core_2_r2 <= 16'd0;
+            core_2_r3 <= 16'd0;
+            core_2_r4 <= 16'd0;
+            core_2_r5 <= 16'd0;
+            core_2_r6 <= 16'd0;
+            core_2_r7 <= 16'd0;
+        end else begin
+            if (core2_is_MULT) begin
+                case (core2_dest_reg_idx)
+                    3'd0: core_2_r0 <= core2_mult_out[31:16];
+                    3'd1: core_2_r1 <= core2_mult_out[31:16];
+                    3'd2: core_2_r2 <= core2_mult_out[31:16];
+                    3'd3: core_2_r3 <= core2_mult_out[31:16];
+                    3'd4: core_2_r4 <= core2_mult_out[31:16];
+                    3'd5: core_2_r5 <= core2_mult_out[31:16];
+                    3'd6: core_2_r6 <= core2_mult_out[31:16];
+                    3'd7: core_2_r7 <= core2_mult_out[31:16];
+                endcase
+                case (core2_low_reg_idx)
+                    3'd0: core_2_r0 <= core2_mult_out[15:0];
+                    3'd1: core_2_r1 <= core2_mult_out[15:0];
+                    3'd2: core_2_r2 <= core2_mult_out[15:0];
+                    3'd3: core_2_r3 <= core2_mult_out[15:0];
+                    3'd4: core_2_r4 <= core2_mult_out[15:0];
+                    3'd5: core_2_r5 <= core2_mult_out[15:0];
+                    3'd6: core_2_r6 <= core2_mult_out[15:0];
+                    3'd7: core_2_r7 <= core2_mult_out[15:0];
+                endcase
+            end else begin
+                if (core2_writeback_to_r0) core_2_r0 <= core2_writeback_data;
+                if (core2_writeback_to_r1) core_2_r1 <= core2_writeback_data;
+                if (core2_writeback_to_r2) core_2_r2 <= core2_writeback_data;
+                if (core2_writeback_to_r3) core_2_r3 <= core2_writeback_data;
+                if (core2_writeback_to_r4) core_2_r4 <= core2_writeback_data;
+                if (core2_writeback_to_r5) core_2_r5 <= core2_writeback_data;
+                if (core2_writeback_to_r6) core_2_r6 <= core2_writeback_data;
+                if (core2_writeback_to_r7) core_2_r7 <= core2_writeback_data;
+            end
+        end
+    end
+
+    // ===== Manual Clock Gating: Core 1 Register File =====
+    wire core1_reg_wr_en = (core1_is_MULT && core1_step) || core1_writeback_enable;
+    wire core1_reg_gclk;
+    reg  core1_reg_gclk_lat;
+    always @(*) begin
+        if (!clk) core1_reg_gclk_lat = core1_reg_wr_en || !rst_n;
+    end
+    assign core1_reg_gclk = clk & core1_reg_gclk_lat;
+
+    // ===== Manual Clock Gating: Core 2 Register File =====
+    wire core2_reg_wr_en = (core2_is_MULT && core2_step) || core2_writeback_enable;
+    wire core2_reg_gclk;
+    reg  core2_reg_gclk_lat;
+    always @(*) begin
+        if (!clk) core2_reg_gclk_lat = core2_reg_wr_en || !rst_n;
+    end
+    assign core2_reg_gclk = clk & core2_reg_gclk_lat;
+
+    // ===== Manual Clock Gating: Multiplier =====
+    wire mult_gclk_en = mult_start || mult_running;
+    wire mult_gclk;
+    reg  mult_gclk_lat;
+    always @(*) begin
+        if (!clk) mult_gclk_lat = mult_gclk_en || !rst_n;
+    end
+    assign mult_gclk = clk & mult_gclk_lat;
+
+    // ===== Manual Clock Gating: Pipeline / Fetch Registers =====
+    wire pipe_gclk_en = core1_ex_ready || core2_ex_ready;
+    wire pipe_gclk;
+    reg  pipe_gclk_lat;
+    always @(*) begin
+        if (!clk) pipe_gclk_lat = pipe_gclk_en || !rst_n;
+    end
+    assign pipe_gclk = clk & pipe_gclk_lat;
+
+    // ===== Manual Clock Gating: AXI / Data State Registers =====
+    wire axi_state_gclk_en = (state != next_state) || cpu_write_enable ||
+                             core2_read_miss_issue || core1_read_miss_issue ||
+                             axi_aw_hs || axi_w_hs || axi_write_accepted ||
+                             axi_write_success || (arvalid_m_inf_data && arready_m_inf_data) ||
+                             (state != NORMAL);
+    wire axi_state_gclk;
+    reg  axi_state_gclk_lat;
+    always @(*) begin
+        if (!clk) axi_state_gclk_lat = axi_state_gclk_en || !rst_n;
+    end
+    assign axi_state_gclk = clk & axi_state_gclk_lat;
+
+    // ===== Manual Clock Gating: Data Cache Tag Array =====
+    wire dcache_tag_gclk_en = cpu_write_enable || cache_fill_write_enable || dram_fill_done;
+    wire dcache_tag_gclk;
+    reg  dcache_tag_gclk_lat;
+    always @(*) begin
+        if (!clk) dcache_tag_gclk_lat = dcache_tag_gclk_en || !rst_n;
+    end
+    assign dcache_tag_gclk = clk & dcache_tag_gclk_lat;
 
     reg [15:0] data_fill_wdata_reg;
     reg [ 5:0] data_fill_waddr_reg;
