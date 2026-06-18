@@ -369,6 +369,15 @@ module DCCPU (
     wire        [31:0] core1_mult_out;
     wire        [31:0] core2_mult_out;
 
+    // ===== Manual Clock Gating: Multiplier =====
+    wire mult_gclk_en = mult_start || mult_running;
+    wire mult_gclk;
+    reg  mult_gclk_lat;
+    always @(*) begin
+        if (!clk) mult_gclk_lat = mult_gclk_en || !rst_n;
+    end
+    assign mult_gclk = clk & mult_gclk_lat;
+
     reg fetch_valid_1, fetch_valid_2;
     reg [12:0] prog_counter_1_if2, prog_counter_2_if2;
 
@@ -713,6 +722,15 @@ module DCCPU (
     wire cache_fill_write_enable = dram_fill_beat && !(write_resp_pending && (data_fill_idx == pending_write_idx_reg));
     wire [15:0] cache_fill_data = rdata_m_inf_data;
 
+    // ===== Manual Clock Gating: Data Cache Tag Array =====
+    wire dcache_tag_gclk_en = cpu_write_enable || cache_fill_write_enable || dram_fill_done;
+    wire dcache_tag_gclk;
+    reg  dcache_tag_gclk_lat;
+    always @(*) begin
+        if (!clk) dcache_tag_gclk_lat = dcache_tag_gclk_en || !rst_n;
+    end
+    assign dcache_tag_gclk = clk & dcache_tag_gclk_lat;
+
     wire core1_ex_ready = (core1_req ? core1_done : 1'b1) && !sync_stall_1 && !core1_mult_stall_req;
     wire core2_ex_ready = (core2_req ? core2_done : 1'b1) && !sync_stall_2 && !core2_mult_stall_req;
 
@@ -752,6 +770,46 @@ module DCCPU (
     wire core2_writeback_to_r5 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd5) || (!core2_is_R && core2_target_reg_idx == 3'd5));
     wire core2_writeback_to_r6 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd6) || (!core2_is_R && core2_target_reg_idx == 3'd6));
     wire core2_writeback_to_r7 = core2_writeback_enable && ((core2_is_R && core2_dest_reg_idx == 3'd7) || (!core2_is_R && core2_target_reg_idx == 3'd7));
+
+    // ===== Manual Clock Gating: Core 1 Register File =====
+    wire core1_reg_wr_en = (core1_is_MULT && core1_step) || core1_writeback_enable;
+    wire core1_reg_gclk;
+    reg  core1_reg_gclk_lat;
+    always @(*) begin
+        if (!clk) core1_reg_gclk_lat = core1_reg_wr_en || !rst_n;
+    end
+    assign core1_reg_gclk = clk & core1_reg_gclk_lat;
+
+    // ===== Manual Clock Gating: Core 2 Register File =====
+    wire core2_reg_wr_en = (core2_is_MULT && core2_step) || core2_writeback_enable;
+    wire core2_reg_gclk;
+    reg  core2_reg_gclk_lat;
+    always @(*) begin
+        if (!clk) core2_reg_gclk_lat = core2_reg_wr_en || !rst_n;
+    end
+    assign core2_reg_gclk = clk & core2_reg_gclk_lat;
+
+    // ===== Manual Clock Gating: Pipeline / Fetch Registers =====
+    wire pipe_gclk_en = core1_ex_ready || core2_ex_ready;
+    wire pipe_gclk;
+    reg  pipe_gclk_lat;
+    always @(*) begin
+        if (!clk) pipe_gclk_lat = pipe_gclk_en || !rst_n;
+    end
+    assign pipe_gclk = clk & pipe_gclk_lat;
+
+    // ===== Manual Clock Gating: AXI / Data State Registers =====
+    wire axi_state_gclk_en = (state != next_state) || cpu_write_enable ||
+                             core2_read_miss_issue || core1_read_miss_issue ||
+                             axi_aw_hs || axi_w_hs || axi_write_accepted ||
+                             axi_write_success || (arvalid_m_inf_data && arready_m_inf_data) ||
+                             (state != NORMAL);
+    wire axi_state_gclk;
+    reg  axi_state_gclk_lat;
+    always @(*) begin
+        if (!clk) axi_state_gclk_lat = axi_state_gclk_en || !rst_n;
+    end
+    assign axi_state_gclk = clk & axi_state_gclk_lat;
 
     wire [12:0] core1_imm_addr_offset = core1_branch_calc_en ? {core1_immediate_ext[11:0], 1'b0} : 13'd0;
     wire [12:0] core1_branch_base_pc = core1_branch_calc_en ? core1_pc_plus_2_ex : 13'd0;
@@ -1196,64 +1254,6 @@ module DCCPU (
             end
         end
     end
-
-    // ===== Manual Clock Gating: Core 1 Register File =====
-    wire core1_reg_wr_en = (core1_is_MULT && core1_step) || core1_writeback_enable;
-    wire core1_reg_gclk;
-    reg  core1_reg_gclk_lat;
-    always @(*) begin
-        if (!clk) core1_reg_gclk_lat = core1_reg_wr_en || !rst_n;
-    end
-    assign core1_reg_gclk = clk & core1_reg_gclk_lat;
-
-    // ===== Manual Clock Gating: Core 2 Register File =====
-    wire core2_reg_wr_en = (core2_is_MULT && core2_step) || core2_writeback_enable;
-    wire core2_reg_gclk;
-    reg  core2_reg_gclk_lat;
-    always @(*) begin
-        if (!clk) core2_reg_gclk_lat = core2_reg_wr_en || !rst_n;
-    end
-    assign core2_reg_gclk = clk & core2_reg_gclk_lat;
-
-    // ===== Manual Clock Gating: Multiplier =====
-    wire mult_gclk_en = mult_start || mult_running;
-    wire mult_gclk;
-    reg  mult_gclk_lat;
-    always @(*) begin
-        if (!clk) mult_gclk_lat = mult_gclk_en || !rst_n;
-    end
-    assign mult_gclk = clk & mult_gclk_lat;
-
-    // ===== Manual Clock Gating: Pipeline / Fetch Registers =====
-    wire pipe_gclk_en = core1_ex_ready || core2_ex_ready;
-    wire pipe_gclk;
-    reg  pipe_gclk_lat;
-    always @(*) begin
-        if (!clk) pipe_gclk_lat = pipe_gclk_en || !rst_n;
-    end
-    assign pipe_gclk = clk & pipe_gclk_lat;
-
-    // ===== Manual Clock Gating: AXI / Data State Registers =====
-    wire axi_state_gclk_en = (state != next_state) || cpu_write_enable ||
-                             core2_read_miss_issue || core1_read_miss_issue ||
-                             axi_aw_hs || axi_w_hs || axi_write_accepted ||
-                             axi_write_success || (arvalid_m_inf_data && arready_m_inf_data) ||
-                             (state != NORMAL);
-    wire axi_state_gclk;
-    reg  axi_state_gclk_lat;
-    always @(*) begin
-        if (!clk) axi_state_gclk_lat = axi_state_gclk_en || !rst_n;
-    end
-    assign axi_state_gclk = clk & axi_state_gclk_lat;
-
-    // ===== Manual Clock Gating: Data Cache Tag Array =====
-    wire dcache_tag_gclk_en = cpu_write_enable || cache_fill_write_enable || dram_fill_done;
-    wire dcache_tag_gclk;
-    reg  dcache_tag_gclk_lat;
-    always @(*) begin
-        if (!clk) dcache_tag_gclk_lat = dcache_tag_gclk_en || !rst_n;
-    end
-    assign dcache_tag_gclk = clk & dcache_tag_gclk_lat;
 
     reg [15:0] data_fill_wdata_reg;
     reg [ 5:0] data_fill_waddr_reg;
